@@ -1,19 +1,17 @@
 import sys
 import time
-
 from struct_methods import *
-
 
 class Packet:
     """Read a single JAGA packet. Can be given an input buffer, or constructed"""
 
-
+    # define various samples per packet given the number of channels recorded
     SAMPLES_PER_PACKET = {
         1: 500,
         2: 250,
         4: 125,
         8: 86,
-        16: 43
+        16: 43 
     }
 
     TTL_READS_V0 = {  # (samples_per_packet / 8) + 1, aligned to 2-byte boundaries
@@ -57,7 +55,7 @@ class Packet:
         self.ttl_bytes = None
         self.ttl_bits = None
         self.channels = channels
-	self.has_timestamp = has_timestamp
+        self.has_timestamp = has_timestamp
         if self.buffer:
             # A buffer was supplied, so read data from the buffer.
             try:
@@ -73,14 +71,15 @@ class Packet:
                     self.data_ttl(ttl_reads)
             except struct.error as e:
                 # Out of data, exit cleanly.
-		#sys.stderr.write(str(e) + "\n")  # TODO: Reenable
+                #sys.stderr.write(str(e) + "\n")  # TODO: Reenable
                 raise ValueError
-        # If self.buffer == None, then we're constructing a packet from scratch, for example when
-        # reconstructing a packet from a CRC and the XOR of a series of packets.
+                # If self.buffer == None, then we're constructing a packet from scratch, for example when
+                # reconstructing a packet from a CRC and the XOR of a series of packets.
 
     def data_header(self):
         """Read the data header."""
-	if self.has_timestamp:
+
+        if self.has_timestamp:
           self.timestamp = read_doublele(self.buffer)
         self.version = read_char(self.buffer)
 
@@ -132,9 +131,9 @@ class Packet:
 
     def data_ttl(self, ttl_reads):
         """Read TTL values at the end of the packet. Should only call if self.ttl=True."""
-        for i in range(ttl_reads):
+        for i in xrange(ttl_reads):
             self.ttl_bytes.append(read_char(self.buffer))
-        for i in range(self.samples_per_packet):
+        for i in xrange(self.samples_per_packet):
             self.ttl_bits.append((self.ttl_bytes[i / 8] & (1 << (7 - (i % 8)))) > 0)
         assert(len(self.ttl_bytes) == ttl_reads)
         assert(len(self.ttl_bits) == self.samples_per_packet)
@@ -151,22 +150,24 @@ class Packet:
         output = "=== packet v"
         output += str(self.version) + "\n"
         mode = []
-        if self.crc: mode.append('CRC')
-        if self.ttl: mode.append('TTL')
+        if self.crc: 
+            mode.append('CRC')
+        if self.ttl: 
+            mode.append('TTL')
         if len(mode) > 0:
             output += " ".join(mode) + "\n"
-	if self.has_timestamp:
-          output += "Timestamp: " + self.time2str(self.timestamp) + "\n"
-        output += str(self.channels) + " channels\n"
-        output += (str(self.crc_interval) + " packets between CRC packets\n") if self.crc else ""
-        output += (str(self.bits_per_sample) + " bits per sample\n") if self.bits_per_sample else ""
-        output += (str(self.samples_per_second) + " samples per second\n") if self.samples_per_second else ""
-        output += (str(self.queued_packets) + " packets in queue\n") if self.queued else ""
-        output += (str(self.discarded_packets) + " packets discarded\n") if self.discarded_packets else ""
-        output += (str(self.seconds) + " elapsed seconds\n") if self.seconds else ""
-        output += str(self.sample_count) + " sample count\n"
-        output += "First set of samples:\n"
-        output += str(self.all_samples[0]) + "\n\n"
+        if self.has_timestamp:
+            output += "Timestamp: " + self.time2str(self.timestamp) + "\n"
+            output += str(self.channels) + " channels\n"
+            output += (str(self.crc_interval) + " packets between CRC packets\n") if self.crc else ""
+            output += (str(self.bits_per_sample) + " bits per sample\n") if self.bits_per_sample else ""
+            output += (str(self.samples_per_second) + " samples per second\n") if self.samples_per_second else ""
+            output += (str(self.queued_packets) + " packets in queue\n") if self.queued else ""
+            output += (str(self.discarded_packets) + " packets discarded\n") if self.discarded_packets else ""
+            output += (str(self.seconds) + " elapsed seconds\n") if self.seconds else ""
+            output += str(self.sample_count) + " sample count\n"
+            output += "First set of samples:\n"
+            output += str(self.all_samples[0]) + "\n\n"
         return output
 
     def convert_v3_to_v0(self):
@@ -192,9 +193,9 @@ class Packet:
 
     def data_samples(self):
         """Read all the data samples from the packet"""
-        for i in range(self.samples_per_packet):
+        for i in xrange(self.samples_per_packet):
             samples = []
-            for j in range(self.channels):
+            for j in xrange(self.channels):
                 sample = read_uint16le(self.buffer)
                 samples.append(sample)
             self.all_samples.append(samples)
@@ -210,7 +211,7 @@ class Packet:
         if self.ttl and ttl_fix:  # Adjust for last-bit glitches.
             last_index = len(self.all_samples) - 1
             self.ttl_bits[last_index] = self.ttl_bits[last_index - 1]
-        for i in range(len(self.all_samples)):
+        for i in xrange(len(self.all_samples)):
             fraction = float(i) * float(self.packet_assembly_time()) / float(self.samples_per_packet)
             current_time = self.start_time + elapsed_time + fraction
             if epoch:
@@ -282,7 +283,7 @@ class Packet:
                 self.ttl_bytes = [0] * Packet.TTL_READS_V0[self.channels]
             else:
                 self.ttl_bytes = [0] * Packet.TTL_READS_V3[self.channels]
-            for i in range(len(self.ttl_bits)):
+            for i in xrange(len(self.ttl_bits)):
                 self.ttl_bytes[i / 8] |= self.ttl_bits[i] << (7 - (i % 8))
             for byte in self.ttl_bytes:
                 output += struct.pack("B", byte)

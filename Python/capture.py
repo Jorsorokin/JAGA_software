@@ -1,3 +1,9 @@
+"""
+capture.py
+
+"""
+
+
 #!/usr/bin/python
 import errno
 import os
@@ -17,6 +23,8 @@ if os.name == 'nt':
 else:
   import fcntl
 
+# Presets
+#============================================================
 PORT=55000
 DEFAULT_FILEROOT='jaga_samples_py'
 BUFSIZE=2048   # Needs to be >= maximum packet payload size.
@@ -28,6 +36,7 @@ if os.name == 'nt':
 else:
   MATLAB_PATH="/usr/local/bin/matlab"   #  A possible path on Unix-like systems.
 DATA_PATH='Data'   # Subdirectory to store data in.
+#============================================================
 
 class Capture():
   '''Open UDP port to receive data and save to a file.'''
@@ -67,21 +76,27 @@ class Capture():
       return os.path.join(DATA_PATH, time.strftime('%Y-%m-%d_%H-%M-%S_', time.localtime()) + self.fileroot + '.dat')
 
   def start_capture(self):
-    writer = threading.Thread(target=self.writer_thread)
+    writer = threading.Thread(target=self.writer_thread) # create an instance of a Thread object
     writer.daemon = True
-    writer.start()
-    self.capture_thread()
+    writer.start() # initiate the threading process
+    self.capture_thread() 
 
   def end_capture(self):
     sys.stderr.write("Ending capture.\n")
-    self.s.close()
+    self.s.close() # close the port
     if not self.waiting_for_return:
       self.q.put(self.end)
       self.q.join()
 
   def writer_thread(self):
+    """
+    The target function for the Thread class. 
+    When initiated, the 
+    """
     self._open_file()
     packet_count = 0
+
+    # loop indefinitely to capture data buffers
     while True:
       packet_string = self.q.get()
       if packet_string != self.end:
